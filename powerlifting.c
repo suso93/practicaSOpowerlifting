@@ -13,7 +13,7 @@ struct atletas_competicion {
 	int tarima_asignada;
 	int necesita_beber;
 };
-struct atletas_competicion atletas[10];
+struct atletas_competicion atletas[10];//en el campeonato habrá máximo 10 atletas compitiendo simultáneamente
 
 void inicializaCampeonato();
 
@@ -27,7 +27,6 @@ int main (int argc, char *argv[]) {
 
 void inicializaCampeonato() {
 	for (int i=0;i<10;i++) {
-		//en el campeonato habrá máximo 10 atletas compitiendo simultáneamente
 		atletas[i].id=i;
 		atletas[i].ha_competido=0;
 		atletas[i].tarima_asignada=0;
