@@ -13,7 +13,7 @@ struct atletas_competicion {
 	int tarima_asignada;
 	int necesita_beber;
 };
-struct atletas_competicion atletas[];
+struct atletas_competicion atletas[10];
 
 void inicializaCampeonato();
 
