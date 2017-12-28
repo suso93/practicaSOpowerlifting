@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
+//editaaa
 int cuantos_atletas=0;
 
 struct atletas_competicion {
