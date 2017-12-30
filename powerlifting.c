@@ -26,6 +26,16 @@ struct atletas_competicion atletas[10];//en el campeonato habrá máximo 10 atle
 void inicializaCampeonato();
 int haySitioEnCampeonato();//nos dirá si hay sitio (y si lo hay nos dice el primer hueco) para que entre un atleta a competir
 
+void nuevoCompetidor{
+
+}
+void AccionesAtleta {
+
+}
+void AccionesTarima {
+
+}
+
 int main (int argc, char *argv[]) {
 	inicializaCampeonato();
 	//visualizo la estructura inicial: 
@@ -56,3 +66,4 @@ int haySitioEnCampeonato() {
 	}
 	return -1;
 }
+
