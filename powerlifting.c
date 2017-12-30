@@ -4,9 +4,17 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-//editaaa
+
+//Definicion de constantes
+#define 
+
+//contador de atletas
 int cuantos_atletas=0;
 
+//inicializar los semaforos
+pthread_mutex_t mutex;
+
+//estructura de atretas  -----> DIRIA Q FALTA OTRO STRUCT, pq yo tengo apuntado q uno para la id del podio y otro para la puntuacion
 struct atletas_competicion {
 	int id;
 	int ha_competido;
