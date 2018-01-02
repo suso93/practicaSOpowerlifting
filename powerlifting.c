@@ -14,27 +14,22 @@ int cuantos_atletas=0;
 //inicializar los semaforos
 pthread_mutex_t mutex;
 
-//estructura de atretas  -----> DIRIA Q FALTA OTRO STRUCT, pq yo tengo apuntado q uno para la id del podio y otro para la puntuacion
+//estructura de atletas  -----> DIRIA Q FALTA OTRO STRUCT, pq yo tengo apuntado q uno para la id del podio y otro para la puntuacion. Pues se pone un int para la puntuación
 struct atletas_competicion {
 	int id;
 	int ha_competido;
 	int tarima_asignada;
+	int puntuacion;//
 	int necesita_beber;
 };
 struct atletas_competicion atletas[10];//en el campeonato habrá máximo 10 atletas compitiendo simultáneamente
 
 void inicializaCampeonato();
 int haySitioEnCampeonato();//nos dirá si hay sitio (y si lo hay nos dice el primer hueco) para que entre un atleta a competir
+void nuevoCompetidor();
+void accionesAtleta();
+void accionesTarima();
 
-void nuevoCompetidor{
-
-}
-void AccionesAtleta {
-
-}
-void AccionesTarima {
-
-}
 
 int main (int argc, char *argv[]) {
 	inicializaCampeonato();
@@ -54,6 +49,7 @@ void inicializaCampeonato() {
 		atletas[i].id=0;
 		atletas[i].ha_competido=0;
 		atletas[i].tarima_asignada=0;
+		atletas[i].puntuacion=0;
 		atletas[i].necesita_beber=0;
 	}
 }
@@ -67,3 +63,12 @@ int haySitioEnCampeonato() {
 	return -1;
 }
 
+void nuevoCompetidor{
+
+}
+void AccionesAtleta {
+
+}
+void AccionesTarima {
+
+}
