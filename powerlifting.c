@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <time.h>
 
 //Definicion de constantes
 //#define 
@@ -29,6 +30,8 @@ int podio[3]; //podio de las puntuaciones del campeonato
 void inicializaCampeonato();
 int haySitioEnCampeonato();//nos dirá si hay sitio (y si lo hay nos dice el primer hueco) para que entre un atleta a competir
 void nuevoCompetidor();
+void competidorATarima1();
+void finalizaCompeticion();
 void accionesAtleta();
 void accionesTarima();
 void  writeLogMessage(char *id, char *msg);
@@ -55,7 +58,7 @@ int main (int argc, char *argv[]) {
  	}
 	inicializaCampeonato();
 	
-	FILE *ficherolog = fopen ("registroTiempos.log","w"); //errores al abrir?
+	FILE *ficherolog = fopen ("ficherolog.log","w"); //errores al abrir?
 	//visualizo la estructura inicial: 
 	for (int i=0;i<10;i++) {
 		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
@@ -87,17 +90,19 @@ int haySitioEnCampeonato() {
 	return -1;
 }
 
-void nuevoCompetidor{
+void nuevoCompetidor (){
 
 }
-void AccionesAtleta {
+void AccionesAtleta (){
 
 }
-void competidorATarima1 {
+void competidorATarima1 (){
 	//al recibir SIGUSR1 meter crear atleta y meter en la cola de la tarima1
 }
-void AccionesTarima {
+void AccionesTarima (){
 
+}
+void finalizaCompeticion (){
 }
 void  writeLogMessage(char *id, char *msg) {
 	//la hora  actual
@@ -106,7 +111,7 @@ void  writeLogMessage(char *id, char *msg) {
 	char  stnow [19];
 	strftime(stnow , 19, " %d/ %m/ %y  %H: %M: %S", tlocal);
 	//  Escribimos  en el log
-	logFile = fopen(logFileName , "a");
-	fprintf(logFile , "[ %s]  %s:  %s\n", stnow , id, msg);
-	fclose(logFile);
+	ficherolog = fopen("ficherolog.log" , "a");
+	fprintf(ficherolog , "[ %s]  %s:  %s\n", stnow , id, msg);
+	fclose(ficherolog);
 }
