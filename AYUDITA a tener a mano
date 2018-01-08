@@ -1,0 +1,12 @@
+Compilación: 
+gcc powerlifting.c -o pl -lpthread
+
+Envío de señal para meter un atleta: 
+kill -10 PID    (*)
+kill -12 PID    (para cuando nos metamos con dos tarimas) (*)
+
+Envío de señal para pedir terminar la competición:
+kill -2 PID     (*)
+
+
+* el PID que tenemos que poner lo estamos sacando con print en pantalla en la ejecución del programa para facilitar las pruebas
