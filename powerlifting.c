@@ -13,6 +13,8 @@
 int cuantos_atletas=0;
 /*int atletas_tarima1;
 int atletas_tarima2;*/
+int descansoTarima1=0; //contador de atletas que han participado en la tarima para empezar a descansar
+int descansoTarima2=0;
 
 //inicializar los semaforos:
 pthread_mutex_t mutex,semaforo_atletas;
@@ -78,7 +80,8 @@ int main (int argc, char *argv[]) {
 	//tarimas:crear los 2 hilos de tarimas (primero solo 1)
 	//pthread_create(...);
 	FILE *ficherolog = fopen ("ficherolog.log","w"); //errores al abrir?
-
+	srand (time(NULL)); //Para generar numeros aleatorios
+	
 	//visualizo la estructura inicial PARA IR PROBANDO -> BORRAR: 
 	for (int i=0;i<maximoAtletas;i++) {
 		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
@@ -143,14 +146,57 @@ void nuevoCompetidor (){
 void AccionesAtleta (){ //
 	//guardar en log:
 	//hora de entrada a tarima y a cual
+	char msg = "He entrado a la tarima 1";   //Modificar cuando utilicemos 2 tarimas
+	writeLogMessage(atletas[posicion].id, msg);
 	//calculo del comportamiento del atleta
+
+	
 		
 }
 
 void AccionesTarima (){
 	//busca primer atleta en espera de su cola, sino el primero de la otra tarima
-
-
+	
+	
+	int comportamiento = calculaAletorios(0,10); 	//Numero aleatorio para calcular el comportamiento
+	if(comportamiento <8) {
+		int tiempo = calculaAleatorios(2,6);
+		sleep(tiempo);
+		char msg = "He hecho un levantamiento valido en: ";    //Añadir el tiempo
+		writeLogMessage(atletas[posicion].id, msg);  //Duda sobre si poner id del atleta o la tarima 
+		
+		int puntuacion = calculaAleatorios(60,300);
+		atletas[posicion].puntuacion = puntuacion;
+		
+		//Escribir en el log la puntuacion ganada por el atleta
+		
+	} else if(comportamiento = 8) {
+		int tiempo = calculaAleatorios(1,4);
+		sleep(tiempo);
+		char msg = "Movimiento nulo por incumplimiento de normas";    
+		writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
+		
+		int puntuacion = 0;
+	} else {
+		int tiempo = calculaAleatorios(6,10);
+		sleep(tiempo);
+		char msg = "Movimiento nulo por falta de fuerzas";    
+		writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
+		
+		int puntuacion = 0;
+	}
+	
+	if(calculaAleatorios(0,10) == 1) {		//calcula si el atleta necesita beber o no
+		atletas[posicion].necesita_beber=1;	
+	}
+	
+	//Finaliza el atleta que esta participando
+	descansoTarima1 ++;
+	if(descansoTarima1 == 4) {
+		sleep(10);
+		
+		descansoTarima1 = 0;
+	}
 
 }
 void finalizaCompeticion (){
@@ -178,3 +224,8 @@ void  writeLogMessage(char *id, char *msg) {
 	fprintf(ficherolog , "[ %s]  %s:  %s\n", stnow , id, msg);
 	fclose(ficherolog);
 }
+
+int calculaAleatorios(int min, int max) {
+	return rand() % (max-min+1) + min;
+}
+
