@@ -1,231 +1,425 @@
+#include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
 #include <time.h>
+#include <unistd.h>
 
-//Definicion de constantes
-#define maximoAtletas 10
 
-//contador de atletas que participen a lo largo del campeonato
-int cuantos_atletas=0;
-/*int atletas_tarima1;
-int atletas_tarima2;*/
-int descansoTarima1=0; //contador de atletas que han participado en la tarima para empezar a descansar
-int descansoTarima2=0;
+// Definición de constantes.
 
-//inicializar los semaforos:
-pthread_mutex_t mutex,semaforo_atletas;
+#define ATLETAS 10
 
-struct atletas_competicion {
+
+/* Declaración de las variables globales. */
+
+// Semáforos y condiciones.
+
+pthread_mutex_t semaforo_atletas, semaforo_fuente;
+pthread_cond_t condicion; // Condición para la fuente.
+
+// Contador de atletas.
+
+int contador_atletas;
+int descansoTarima1; // Contador de atletas que han participado en la tarima para empezar a descansar.
+int descansoTarima2;
+
+// Lista de 10 atletas con sus datos.
+
+struct atletas_competicion 
+{
 	int id;
 	int ha_competido;
 	int tarima_asignada;
-	int puntuacion;
+	int puntuacion; 
 	int necesita_beber;
+	pthread_t atleta;
 };
-struct atletas_competicion atletas[maximoAtletas];
 
+struct atletas_competicion atletas[ATLETAS];
 
-/*//?Creamos struct para las tarimas? Sería algo asi:
-struct tarimas_competicion {
-	int id;
-	int estado;//0 para libre, 1 para ocupada, 2 para cerrada
-	int atletas;//contador de atletas que han pasado por esta tarima
-};
-struct tarimas_competicion tarima[numTarimas];*/
+// Fichero.
 
-FILE *ficherolog;
+FILE *ficheroLog;
+char *mensaje;
+
+// Puntuación del podio formado por los tres competidores que obtengan más puntuación.
 
 int podio[3]; 
-int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?
-int estadoFuente;//0 libre, 1 para ocupada
 
-//funciones
-void inicializaCampeonato();
-int haySitioEnCampeonato();//nos dirá si hay sitio (y si lo hay nos dice el primer hueco) para que entre un atleta a competir
-void nuevoCompetidor();//en realidad esta funcion creo que es la que usaremos para cuando se recibe la señal
-//void competidorATarima1();
-void finalizaCompeticion();
-void accionesAtleta();//le pasaremos el atleta (VER ¿id?/¿posicion?) y la tarima
-void accionesTarima();//le pasaremos la tarima
-void  writeLogMessage(char *id, char *msg);
+// Identificador de los 3 mejores atletas.
+
+int ids_mejores[3]; //no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?
+
+// Bandera de la fuente para saber si está vacía (0) u ocupada (1).
+
+int fuente;
+
+// Bandera para finalizar cuando sea igual a 1.
+
+int finalizar;
 
 
-int main (int argc, char *argv[]) {
-	//SIGUSR1 para enviar a tarima1 
-	if(signal(SIGUSR1,nuevoCompetidor)==SIG_ERR) {
-				perror("Llamada a signal.");
-				exit(-1);
+/* Declaración de las funciones. */
+
+int CalculaAleatorios (int , int );
+void EscribirMensajeLog (char* , char* );
+void InicializarCompeticion ();
+int HaySitioEnCompeticion ();
+void NuevoCompetidor (int );
+void FinalizarCompeticion (int );
+void *AccionesAtleta (void* );
+void *AccionesTarima (void* );
+
+
+/* Función principal. */
+
+int main (int argc, char *argv[]) 
+{
+	// Se inicializan las señales para las tarimas y para finalizar la competición, además de comprobar si hay errores.
+
+	if (signal(SIGUSR1, NuevoCompetidor)==SIG_ERR) 
+	{
+		perror("Error en la llamada a la señal SIGUSR1.\n");
+		exit(-1);
 	}
-	/*if(signal(SIGUSR2,competidorATarima2)==SIG_ERR) {
-				perror("Llamada a signal.");
-				exit(-1);
-	}*/
-	if(signal(SIGINT,finalizaCompeticion)==SIG_ERR) {
-				perror("Llamada a signal.");
-				exit(-1);
+
+	if (signal(SIGUSR2, NuevoCompetidor)==SIG_ERR) 
+	{
+		perror("Error en la llamada a la señal SIGUSR2.\n");
+		exit(-1);
 	}
 
-	//inicializar recursos:
-	/*if (pthread_mutex_init(&semaforo_atletas, NULL)!=0)
-+	{
-+		perror("Error en la creación del semáforo de los atletas.\n");
-+		exit(-1);
- 	}*/
-	//el contador de atletas lo tenemos inicializado arriba
-	inicializaCampeonato();
-	//tarimas:crear los 2 hilos de tarimas (primero solo 1)
-	//pthread_create(...);
-	FILE *ficherolog = fopen ("ficherolog.log","w"); //errores al abrir?
-	srand (time(NULL)); //Para generar numeros aleatorios
-	
-	//visualizo la estructura inicial PARA IR PROBANDO -> BORRAR: 
-	for (int i=0;i<maximoAtletas;i++) {
-		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
+	if (signal(SIGINT, FinalizarCompeticion)==SIG_ERR) 
+	{
+		perror("Error en la llamada a la señal SIGINT.\n");
+		exit(-1);
 	}
-	printf("El pid del campeonato es %d\n",getpid());
-	if (haySitioEnCampeonato()==-1) {
-		printf("La inscripción al campeonato está completa. No se puede inscribir aún.\n");
-	} else {
-		printf("Hueco para nuevo atleta: %d\n",haySitioEnCampeonato());
-	}//HASTA AKI BORRAR
 
-	//espera por señales:
-	while(1) {
+	// Se inicializan los semáforos y la condición, además de comprobar si hay errores.
+
+	if (pthread_mutex_init(&semaforo_atletas, NULL)!=0)
+	{
+		perror("Error en la creación del semáforo de los atletas.\n");
+		exit(-1);
+	}
+
+	if (pthread_mutex_init(&semaforo_fuente, NULL)!=0)
+	{
+		perror("Error en la creación del semáforo de la fuente.\n");
+		exit(-1);
+	}
+
+	if (pthread_cond_init(&condicion, NULL)!=0)
+	{
+		perror("Error en la creación de la condición.\n");
+		exit(-1);
+	}
+
+	// Se inicializan los contadores de atletas, la fuente y finalizar.
+
+	contador_atletas=0;
+	descansoTarima1=0;
+	descansoTarima2=0;
+	fuente=0;
+	finalizar=0;
+
+	srand(time(NULL)); // Se genera la semilla aleatoria en función de la hora del sistema.
+
+	// Se inicializan los datos de los atletas.
+
+	InicializarCompeticion();
+
+	// Se incializan las tarimas y se crean los hilos.
+
+	pthread_t tarima_1, tarima_2;
+	pthread_create(&tarima_1, NULL, AccionesTarima, (void*)1);
+	pthread_create(&tarima_2, NULL, AccionesTarima, (void*)2);
+
+	// Se crea el fichero log.
+
+	FILE *ficheroLog=fopen("registroTiempos.log", "w");
+
+	// Identificador del campeonato para enviar las señales.
+
+	printf("El pid del campeonato es: %d.\n", getpid());
+
+ 	// Se espera por las señales. NOTA:cuando recibo sigingt, pongo finalizar a 1, para que al finalizar espere a que termine la cola.
+
+	while(1)
+	{
 		
 	}
-	
+
+
+/*	
+	// Visualización final de la competición.
+
+	for (int i=0;i<10;i++) 
+	{
+		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d.\n", atletas[i].id, atletas[i].ha_competido, atletas[i].tarima_asignada, atletas[i].necesita_beber);
+	}
+*/
+
 }
 
-void inicializaCampeonato() {
-	for (int i=0;i<maximoAtletas;i++) {
+
+/* Definición de las funciones. */
+
+int CalculaAleatorios (int min, int max)
+{
+	return rand() % (max-min+1) + min;
+}
+
+void EscribirMensajeLog (char *identificador, char *mensaje)
+{
+	// Se calcula la hora actual.
+
+	time_t now=time(0);
+	struct tm *tlocal=localtime(&now);
+	char stnow[19];
+	strftime (stnow, 19, "%d/ %m/ %y %H: %M: %S ", tlocal);
+
+	// Se escribe en el fichero log llamado registroTiempos.log.
+
+	ficheroLog=fopen("registroTiempos.log", "a");
+	fprintf(ficheroLog, "[%s] %s: %s\n", stnow, identificador, mensaje) ;
+	fclose(ficheroLog);
+}
+
+void InicializarCompeticion () 
+{
+	for (int i=0; i<ATLETAS;i++)
+	{
 		atletas[i].id=0;
 		atletas[i].ha_competido=0;
 		atletas[i].tarima_asignada=0;
-		atletas[i].puntuacion=0;
+		atletas[i].puntuacion=0; 
 		atletas[i].necesita_beber=0;
 	}
-} //es posible que no lo necesitemos ya que se inicializan al crearse un nuevo competidor.. 
+} // Es posible que no lo necesitemos ya que se inicializan al crearse un nuevo competidor.
 
-int haySitioEnCampeonato() {
-	for (int i=0;i<maximoAtletas;i++) {
-		if (atletas[i].id==0) {
+int HaySitioEnCompeticion ()
+{
+	for (int i=0;i<10;i++) 
+	{
+		if (atletas[i].id==0) 
+		{
 			return i;
 		}
 	}
 	return -1;
-}//devuelve -1 en caso de no haber, y sino nos da el primer hueco que encuentre
+} // Devuelve -1 en caso de no haber sitio y sino nos da el primer hueco que encuentre.
 
-void nuevoCompetidor (){ 
-//al recibir SIGUSR1:
-	int posicion;
-	if(signal(SIGUSR1,nuevoCompetidor)==SIG_ERR) {
-				perror("Llamada a signal.");
+void NuevoCompetidor (int sig)
+{
+	// Primero se comprueba si hay sitio en la competición y cuál es.
+
+	if (HaySitioEnCompeticion()!=-1)
+	{
+		printf("El nuevo atleta va a ser incrito en la posición: %d.\n", HaySitioEnCompeticion()+1);
+
+		// Se añaden los atletas de uno en uno (bloqueando el semáforo) y se le asignan los datos al atleta.
+
+		if (pthread_mutex_lock(&semaforo_atletas)!=0)
+		{
+			perror("Error en el bloqueo del semáforo de los atletas.\n");
+			exit(-1);
+		}
+
+		contador_atletas++;
+		int posicion=HaySitioEnCompeticion();
+		atletas[posicion].id=contador_atletas;
+		
+		// Se establecen las señales para asignar las tarimas, además se comprueba si fallan.
+
+		if (sig==SIGUSR1)
+		{
+			if (signal(SIGUSR1, NuevoCompetidor)==SIG_ERR) 
+			{
+				perror("Error en la llamada a la señal SIGUSR1.\n");
 				exit(-1);
-	}
-	printf("Un atleta ha solicitado inscribirse...\n");
-	if(haySitioEnCampeonato()!=-1) {
-		printf("Vas a ser inscrito\n");
-		cuantos_atletas++;
-		posicion=haySitioEnCampeonato();
-		atletas[posicion].id=cuantos_atletas;
-		atletas[posicion].puntuacion=0;
-		atletas[posicion].tarima_asignada=1;//al principio solo una tarima, ademas con SIGUSR1 va para tarima1 //DUDA: ¿aqui se ponia la tarima o se indicaba si la tenia asignada o no?
-		atletas[posicion].ha_competido=0;
+			}
+			atletas[posicion].tarima_asignada=1;	
+			printf("El atleta %i se prepara para ir a la tarima 1.\n", posicion+1);
+		}
+	
+		if (sig==SIGUSR2)
+		{
+			if (signal(SIGUSR2, NuevoCompetidor)==SIG_ERR) 
+			{
+				perror("Error en la llamada a la señal SIGUSR2.\n");
+				exit(-1);
+			}
+			atletas[posicion].tarima_asignada=2;
+			printf("El atleta %i se prepara para ir a la tarima 2.\n", posicion+1);
+		}
+
+	
+		// Se especifica si necesita beber y se crea el hilo.
+
 		atletas[posicion].necesita_beber=0;
-		//creo hilo de atleta:
-		//pthread_create();
-		AccionesAtleta();//ver qué le pasamos, creo que habria que pasarle id atleta y id tarima
-	} else { 
-		printf("Ya están inscritos y participando 10 atletas, de momento no puedes participar\n");
+		pthread_create(&atletas[posicion].atleta, NULL, AccionesAtleta, (void *)&atletas[posicion].id);
+
+		// Se desbloquea el semáforo, además se comprueba si falla.
+
+		if (pthread_mutex_unlock(&semaforo_atletas)!=0)
+		{
+			perror("Error en el desbloqueo del semáforo de los atletas.\n");
+			exit(-1);
+		}
+	}
+	else
+	{ 
+		printf("Ya están inscritos y participando 10 atletas, de momento no puedes participar.\n");
 	}
 }
-void AccionesAtleta (){ //
-	//guardar en log:
-	//hora de entrada a tarima y a cual
-	char msg = "He entrado a la tarima 1";   //Modificar cuando utilicemos 2 tarimas
-	writeLogMessage(atletas[posicion].id, msg);
-	//calculo del comportamiento del atleta
 
-	
-		
+
+void FinalizarCompeticion (int sig)
+{	
+	if (signal(SIGINT, FinalizarCompeticion)==SIG_ERR) 
+	{
+		perror("Error en la llamada a la señal SIGINT.\n");
+		exit(-1);
+	}
+	printf("Has pulsado finalizar competición.\n");
+		//Parar de recibir señales!!!!
+	//se realiza todo lo necesario para terminar con los atletas activos
+
+
+//PRUEBA para ir viendo como están en el momento de la petición:
+	for (int i=0;i<ATLETAS;i++) {
+		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
+	}//
+
+
+	sleep(3);
+	printf("Te mostraré los resultados.\n");
+	signal(SIGTERM, SIG_DFL);
+	raise(SIGTERM);
 }
 
-void AccionesTarima (){
-	//busca primer atleta en espera de su cola, sino el primero de la otra tarima
-	
-	
-	int comportamiento = calculaAletorios(0,10); 	//Numero aleatorio para calcular el comportamiento
-	if(comportamiento <8) {
-		int tiempo = calculaAleatorios(2,6);
-		sleep(tiempo);
-		char msg = "He hecho un levantamiento valido en: ";    //Añadir el tiempo
-		writeLogMessage(atletas[posicion].id, msg);  //Duda sobre si poner id del atleta o la tarima 
-		
-		int puntuacion = calculaAleatorios(60,300);
-		atletas[posicion].puntuacion = puntuacion;
-		
-		//Escribir en el log la puntuacion ganada por el atleta
-		
-	} else if(comportamiento = 8) {
-		int tiempo = calculaAleatorios(1,4);
-		sleep(tiempo);
-		char msg = "Movimiento nulo por incumplimiento de normas";    
-		writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
-		
-		int puntuacion = 0;
-	} else {
-		int tiempo = calculaAleatorios(6,10);
-		sleep(tiempo);
-		char msg = "Movimiento nulo por falta de fuerzas";    
-		writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
-		
-		int puntuacion = 0;
+
+void *AccionesAtleta (void *arg)
+{
+	// 1. Guardar en el log la hora de entrada a la cola que accede. 
+	mensaje = "He entrado a la tarima 1";   //Modificar cuando utilicemos 2 tarimas
+//	EscribirMensajeLog(atletas[posicion].id, mensaje); 
+
+	// 2. Guardar en el log el tipo de tarima al que accede.
+
+
+	// El atleta llega a la tarima y espera 4 segundos para realiza su levantamiento.
+
+	printf("El atleta %i se prepara para realizar el levantamiento.\n", *(int*) arg);
+	sleep(4);
+
+	// Comportamiento del atleta: comprobación del estado de salud.
+
+	int estado_salud=CalculaAleatorios(0,100);
+	if (estado_salud<=15)
+	{
+		printf("El atleta %i no puede realizar el levantamiento por problemas de deshidratación.\n", *(int*) arg);		
+	// Salir de la cola ???. 3.a. Si no llega a realizar el levantamiento, no llega a subir a la tarima y se escribe en el log, se daría fin al hilo Atleta y se liberaría espacio en la cola.
+	}	
+	else
+	{
+		sleep (3);
 	}
 	
-	if(calculaAleatorios(0,10) == 1) {		//calcula si el atleta necesita beber o no
-		atletas[posicion].necesita_beber=1;	
+
+	// 4. Si ya ha salido a competir, debemos esperar a que termine.
+	// 5. Guardamos en el log la hora a la que ha finalizado su levantamiento.
+	// 6. Fin del hilo del atleta. NOTA: el hilo se sigue ejecutando aun asi este el tio ataascado en la fuente.
+}
+
+
+void *AccionesTarima (void *arg)
+{
+ 	// 1. Busca el primer atleta para competir, que será el que más tiempo lleve a la espera. Si no hay nadie esperando en esta tarima, busca a otro atleta al que se le asignó la otra tarima, para echar una mano).??? NOTA:si tarima 2 esta libre y no tiene nadie en su cola(primera comprobar que no tiene nadie en la suya IMPORTANTE), puede ayudar a tarima 1, y viceversa.
+
+	// 2. Cambiamos el flag . (NOTA: se pone a 1) ¿QUÉ FLAG?
+
+
+	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
+
+	int movimiento=CalculaAleatorios(1,10); // Número aleatorio para calcular el comportamiento.
+	if (movimiento<=8)
+	{
+		int tiempo=CalculaAleatorios(2,6);
+		sleep(tiempo); // Tiempo del levantamiento del atleta.
+		printf("Movimiento válido.\n");
+
+		mensaje = "He hecho un levantamiento valido en: ";  //Añadir el tiempo.
+//		EscribirMensajeLog(atletas[posicion].id, mensaje);  //Duda sobre si poner id del atleta o la tarima 
+		int puntuacion=CalculaAleatorios(60,300);
+//		atletas[posicion].puntuacion = puntuacion;
+		printf("El juez califica el movimiento con la puntuación de: %i.\n", puntuacion);
+	}
+	else
+	{
+		if (movimiento==9)
+		{
+
+			int tiempo = CalculaAleatorios(1,4);
+			sleep(tiempo);
+
+			mensaje = "Movimiento nulo por incumplimiento de normas.";    
+//			EscribirMensajeLog(atletas[posicion].id, mensaje);	//Duda sobre si poner id del atleta o la tarima 
+			printf("%s\n", mensaje);
+
+			int puntuacion = 0;
+//			atletas[posicion].puntuacion = puntuacion;
+			printf("El juez califica el movimiento como nulo, por lo tanto la puntuación es: %i.\n", puntuacion);
+		}
+		else
+		{
+
+			int tiempo = CalculaAleatorios(6,10);
+			sleep(tiempo);
+	
+			mensaje = "Movimiento nulo por falta de fuerza.";    
+//			EscribirMensajeLog(atletas[posicion].id, mensaje);	//Duda sobre si poner id del atleta o la tarima
+			printf("%s\n", mensaje);
+
+			int puntuacion = 0;
+//			atletas[posicion].puntuacion = puntuacion;
+			printf("El juez califica el movimiento como nulo, por lo tanto la puntuación es: %i.\n", puntuacion);
+		}
+	}
+
+	// Se calcula si el atleta necesita beber o no.	NOTA:si tiene q ir a beber agua, pongo el flag al 2 ¿Cuál: variable fuente o necesita_beber?
+
+	if(CalculaAleatorios(1,10) == 1) 
+	{		
+//		atletas[posicion].necesita_beber=1;	
 	}
 	
-	//Finaliza el atleta que esta participando
+	// Finaliza el atleta que está participando.
+	
+//	atletas[posicion].ha_competido=1;
+
+	// Se comprueba si al juez le toca descansar (cada 4 atletas 10 segundos).
+
 	descansoTarima1 ++;
-	if(descansoTarima1 == 4) {
+	if(descansoTarima1 == 4) 
+	{
 		sleep(10);
 		
 		descansoTarima1 = 0;
 	}
 
-}
-void finalizaCompeticion (){
-	printf("Has pulsado finalizar competicion\n");
-	//Parar de recibir señales!!!!
+	
 
-	//Y se realiza todo lo necesario para terminar con los atletas activos
-	//PRUEBA para ir viendo como están en el momento de la petición:
-	for (int i=0;i<maximoAtletas;i++) {
-		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
-	}//
-	sleep(3);
-	printf("Te mostraré los resultados\n");//
-	signal(SIGTERM, SIG_DFL);
-	raise(SIGTERM);
-}
-void  writeLogMessage(char *id, char *msg) {
-	//la hora  actual
-	time_t  now = time (0);
-	struct  tm *tlocal = localtime (&now);
-	char  stnow [19];
-	strftime(stnow , 19, " %d/ %m/ %y  %H: %M: %S", tlocal);
-	//  Escribimos  en el log
-	ficherolog = fopen("ficherolog.log" , "a");
-	fprintf(ficherolog , "[ %s]  %s:  %s\n", stnow , id, msg);
-	fclose(ficherolog);
-}
+	// 10. Incrementamos el contador de atletas que han competido.
 
-int calculaAleatorios(int min, int max) {
-	return rand() % (max-min+1) + min;
+	// 12. Volvemos al paso 1 y buscamos el siguiente (siempre priorizando entre los atletas asignados a dicha tarima).
+
+	// para la parte opcional, con el malloc reservo espacio para muchos mas, en plan 300, y no con eso quiero decir q vaya  a permitir entrarl a todos, sino que hay espacio en memoria
+
 }
 
