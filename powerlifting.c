@@ -26,7 +26,7 @@ pthread_mutex_t semaforo_fuente,semaforo_atletas;
 pthread_cond_t condicion; // Condición para la fuente.
 
 /*REVISAR que opcion de mutex es mejor y vamos a usar
-//lista de semaforos
+//lo aclaró hoy y se usará como arriba en principio
 pthread_mutex_t semaforo_Escribir;
 pthread_mutex_t semaforo_Contador;
 pthread_mutex_t semaforo_Entrada_Cola;
@@ -38,7 +38,6 @@ struct atletasCompeticion {
 	int tarima_asignada;
 	int puntuacion;
 	int necesita_beber;
-	//
 	pthread_t atleta;
 };
 struct atletasCompeticion atletas[MAXIMOATLETAS];
@@ -54,18 +53,22 @@ struct tarimasCompeticion tarima[NUMEROTARIMAS];*/
 /*OTRA opcion para las tarimas: 
 struct tarimasCompeticion{
 	int id;
-	int descansa; //estado
+	int descansa; //estado: 3 estados segun las especificaciones
 	int contador;
 	pthread_t tatami;
 };
-
 struct tarimasCompeticion * punteroTarimas;*/
 
 FILE *registro;
 char *nombreArchivo = "registroTiempos.log";
 
-int podio[3]; 
-int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?
+/*int podio[3]; 
+int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?*/
+struct podioCompeticion {
+	int id;//del atleta
+	int puntuacion;
+};
+struct podioCompeticion podio[3]; //los tres mejores
 int estadoFuente;//0 libre, 1 para ocupada
 int finalizar;
 
@@ -117,7 +120,6 @@ int main (int argc, char *argv[]) {
 	//tarimas:crear los 2 hilos de tarimas (primero solo 1)
 	//pthread_create(...);
 	registro = fopen (nombreArchivo,"w"); //errores al abrir?
-	//fclose(registro);/
 	srand (time(NULL)); //Para generar numeros aleatorios, VER si hacemos asi o con otra semilla
 	
 	//visualizo la estructura inicial PARA IR PROBANDO -> BORRAR: 
@@ -187,7 +189,6 @@ void nuevoCompetidor (int sig){
 		printf("El atleta %i se prepara para ir a la tarima 1.\n", posicion+1);
 		
 		//creo hilo de atleta:
-		//pthread_create();
 		pthread_create(&atletas[posicion].atleta, NULL, accionesAtleta, (void *)&atletas[posicion].id);
 
 		
@@ -205,12 +206,12 @@ void nuevoCompetidor (int sig){
 	}
 }
 void *accionesAtleta (void *arg){ //
-	//guardar en log:
-	//hora de entrada a tarima y a cual
+	
 
 // CALCULAR LA POSICIÓN DEL ATLETA CON EL ID ???
 
-
+	//guardar en log:
+	//hora de entrada a tarima y a cual => La hora la escribe la funcion del log
 	char *msg = "He entrado a la tarima 1";   //Modificar cuando utilicemos 2 tarimas
 	writeLogMessage(arg, msg);
 	//calculo del comportamiento del atleta
@@ -245,7 +246,7 @@ void *actosTarima(void *id){
 void *AccionesTarima (void *arg){
 	int descansoTarima=0; //contador de atletas que han participado en la tarima para empezar a descansar
 	//busca primer atleta en espera de su cola, sino el primero de la otra tarima
-	// 2. Cambiamos el flag . (NOTA: se pone a 1) ¿QUÉ FLAG?
+	// 2. Cambiamos el flag . (NOTA: se pone a 1) ¿QUÉ FLAG? 
 
 
 	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
@@ -254,7 +255,7 @@ void *AccionesTarima (void *arg){
 	if(comportamiento <8) {
 		int tiempo = calculaAleatorios(2,6);
 		sleep(tiempo);
-		char *msg = "He hecho un levantamiento valido en: ";    //Añadir el tiempo
+		char *msg = "He hecho un levantamiento valido en: ";    //La hora la indica la funcion del log
 		writeLogMessage(atletas[posicion].id, msg);  //Duda sobre si poner id del atleta o la tarima 
 		
 		int puntuacion = calculaAleatorios(60,300);
