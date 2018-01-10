@@ -11,15 +11,15 @@
 #include<ctype.h> //DUDA mia: este para que es? Gracias :)
 
 //Definicion de constantes
+
 #define MAXIMOATLETAS 10
 #define NUMEROTARIMAS 2
-
 //contador de atletas que participen a lo largo del campeonato
 int contadorAtletas=0;
 /*int atletas_tarima1;
 int atletas_tarima2;*/
-int descansoTarima1=0; //contador de atletas que han participado en la tarima para empezar a descansar
-int descansoTarima2=0;
+
+
 
 //inicializar los semaforos:
 pthread_mutex_t semaforo_fuente,semaforo_atletas;
@@ -70,16 +70,15 @@ int estadoFuente;//0 libre, 1 para ocupada
 int finalizar;
 
 //funciones
+int calculaAleatorios();
 void inicializaCampeonato();
 int haySitioEnCampeonato();//nos dirá si hay sitio (y si lo hay nos dice el primer hueco) para que entre un atleta a competir
 void nuevoCompetidor(int sig);//REVISAR al añadir para ya dos tarimas
 //void competidorATarima1();
 void finalizaCompeticion(int sig);
-void accionesAtleta(int posicion);//le pasaremos el atleta (VER ¿id?/¿posicion?) y la tarima
-void accionesTarima();//le pasaremos la tarima
-/*O DE ESTA FORMA
-void *accionesTarima(void *id);
-*/
+void *accionesAtleta(void*, int );//le pasaremos el atleta (VER ¿id?/¿posicion?) y la tarima
+void *accionesTarima(void*);//le pasaremos la tarima
+
 void  writeLogMessage(char *id, char *msg);
 
 int main (int argc, char *argv[]) {
@@ -117,12 +116,12 @@ int main (int argc, char *argv[]) {
 	inicializaCampeonato();
 	//tarimas:crear los 2 hilos de tarimas (primero solo 1)
 	//pthread_create(...);
-	registro = fopen ("ficherolog.log","w"); //errores al abrir?
-	fclose(registro);
+	registro = fopen (nombreArchivo,"w"); //errores al abrir?
+	//fclose(registro);/
 	srand (time(NULL)); //Para generar numeros aleatorios, VER si hacemos asi o con otra semilla
 	
 	//visualizo la estructura inicial PARA IR PROBANDO -> BORRAR: 
-	for (int i=0;i<maximoAtletas;i++) {
+	for (int i=0;i<MAXIMOATLETAS;i++) {
 		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
 	}
 	printf("El pid del campeonato es %d\n",getpid());
@@ -132,8 +131,10 @@ int main (int argc, char *argv[]) {
 		printf("Hueco para nuevo atleta: %d\n",haySitioEnCampeonato());
 	}//HASTA AKI BORRAR
 
-	//espera por señales: REVISAR q no sea espera activa
+
 	while(1) {
+	
+		sleep(1);
 		
 	}
 	
@@ -150,7 +151,7 @@ void inicializaCampeonato() {
 } //es posible que no lo necesitemos ya que se inicializan al crearse un nuevo competidor.. 
 
 int haySitioEnCampeonato() {
-	for (int i=0;i<maximoAtletas;i++) {
+	for (int i=0;i<MAXIMOATLETAS;i++) {
 		if (atletas[i].id==0) {
 			return i;
 		}
@@ -168,13 +169,13 @@ void nuevoCompetidor (int sig){
 	printf("Un atleta ha solicitado inscribirse...\n");
 	if(haySitioEnCampeonato()!=-1) {
 		printf("Vas a ser inscrito\n");
-		/*
+		
 		if (pthread_mutex_lock(&semaforo_atletas)!=0)
 		{
 			perror("Error en el bloqueo del semáforo de los atletas.\n");
 			exit(-1);
 		}
-		*/
+		
 		contadorAtletas++;
 		posicion=haySitioEnCampeonato();
 		atletas[posicion].id=contadorAtletas;
@@ -187,10 +188,10 @@ void nuevoCompetidor (int sig){
 		
 		//creo hilo de atleta:
 		//pthread_create();
-		pthread_create(&atletas[posicion].atleta, NULL, AccionesAtleta, (void *)&atletas[posicion].id);
-		AccionesAtleta();//ver qué le pasamos, creo que habria que pasarle id atleta y id tarima
+		pthread_create(&atletas[posicion].atleta, NULL, accionesAtleta, (void *)&atletas[posicion].id);
+
 		
-		/*ANTES o despues de accionesAtleta?
+		//ANTES o despues de accionesAtleta?
 		// Se desbloquea el semáforo, además se comprueba si falla.
 
 		if (pthread_mutex_unlock(&semaforo_atletas)!=0)
@@ -198,16 +199,20 @@ void nuevoCompetidor (int sig){
 			perror("Error en el desbloqueo del semáforo de los atletas.\n");
 			exit(-1);
 		}
-		*/
+		
 	} else { 
 		printf("Ya están inscritos y participando 10 atletas, de momento no puedes participar\n");
 	}
 }
-void AccionesAtleta (){ //
+void *accionesAtleta (void *arg){ //
 	//guardar en log:
 	//hora de entrada a tarima y a cual
-	char msg = "He entrado a la tarima 1";   //Modificar cuando utilicemos 2 tarimas
-	writeLogMessage(atletas[posicion].id, msg);
+
+// CALCULAR LA POSICIÓN DEL ATLETA CON EL ID ???
+
+
+	char *msg = "He entrado a la tarima 1";   //Modificar cuando utilicemos 2 tarimas
+	writeLogMessage(arg, msg);
 	//calculo del comportamiento del atleta
 
 	// El atleta llega a la tarima y espera 4 segundos para realiza su levantamiento.
@@ -217,7 +222,7 @@ void AccionesAtleta (){ //
 
 	// Comportamiento del atleta: comprobación del estado de salud.
 
-	int estado_salud=CalculaAleatorios(0,100);
+	int estado_salud=calculaAleatorios(0,100);
 	if (estado_salud<=15)
 	{
 		printf("El atleta %i no puede realizar el levantamiento por problemas de deshidratación.\n", *(int*) arg);		
@@ -237,18 +242,19 @@ void *actosTarima(void *id){
 
 }
 */
-void AccionesTarima (void *arg){
+void *AccionesTarima (void *arg){
+	int descansoTarima=0; //contador de atletas que han participado en la tarima para empezar a descansar
 	//busca primer atleta en espera de su cola, sino el primero de la otra tarima
 	// 2. Cambiamos el flag . (NOTA: se pone a 1) ¿QUÉ FLAG?
 
 
 	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
 	
-	int comportamiento = calculaAletorios(0,10); 	//Numero aleatorio para calcular el comportamiento
+	int comportamiento = calculaAleatorios(0,10); 	//Numero aleatorio para calcular el comportamiento
 	if(comportamiento <8) {
 		int tiempo = calculaAleatorios(2,6);
 		sleep(tiempo);
-		char msg = "He hecho un levantamiento valido en: ";    //Añadir el tiempo
+		char *msg = "He hecho un levantamiento valido en: ";    //Añadir el tiempo
 		writeLogMessage(atletas[posicion].id, msg);  //Duda sobre si poner id del atleta o la tarima 
 		
 		int puntuacion = calculaAleatorios(60,300);
@@ -259,32 +265,32 @@ void AccionesTarima (void *arg){
 	} else if(comportamiento = 8) {
 		int tiempo = calculaAleatorios(1,4);
 		sleep(tiempo);
-		char msg = "Movimiento nulo por incumplimiento de normas";    
-		writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
-		printf("%s\n", mensaje);
+		char *msg = "Movimiento nulo por incumplimiento de normas";    
+	//	writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
+		printf("%s\n", msg);
 		int puntuacion = 0;
 	} else {
 		int tiempo = calculaAleatorios(6,10);
 		sleep(tiempo);
-		char msg = "Movimiento nulo por falta de fuerzas";    
-		writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
+		char *msg = "Movimiento nulo por falta de fuerzas";    
+	//	writeLogMessage(atletas[posicion].id, msg);	//Duda sobre si poner id del atleta o la tarima 
 		printf("%s\n", msg);
 		int puntuacion = 0;
-		atletas[posicion].puntuacion = puntuacion;
+	//	atletas[posicion].puntuacion = puntuacion;
 		printf("El juez califica el movimiento como nulo, por lo tanto la puntuación es: %i.\n", puntuacion);
 	}
 	
 	if(calculaAleatorios(0,10) == 1) {		//calcula si el atleta necesita beber o no
-		atletas[posicion].necesita_beber=1;	
+	//	atletas[posicion].necesita_beber=1;	
 	}
 	
 	//Finaliza el atleta que esta participando
-	descansoTarima1 ++;
+	descansoTarima ++;
 	// Se comprueba si al juez le toca descansar (cada 4 atletas 10 segundos)
-	if(descansoTarima1 == 4) {
+	if(descansoTarima == 4) {
 		sleep(10);
 		
-		descansoTarima1 = 0;
+		descansoTarima = 0;
 	}
 	// 12. Volvemos al paso 1 y buscamos el siguiente (siempre priorizando entre los atletas asignados a dicha tarima).
 	//para la parte opcional, con el malloc reservo espacio para muchos mas, en plan 300, y no con eso quiero decir q vaya  a permitir entrarl a todos, sino que hay espacio en memoria
@@ -301,8 +307,9 @@ void finalizaCompeticion (int sig){
 	}//
 	sleep(3);
 	printf("Te mostraré los resultados\n");//
+	fclose(registro);
 	signal(SIGTERM, SIG_DFL);
-	raise(SIGTERM);
+	raise(SIGTERM);//Que es y paa que sirve
 }
 void  writeLogMessage(char *id, char *msg) {
 	//la hora  actual
@@ -311,7 +318,7 @@ void  writeLogMessage(char *id, char *msg) {
 	char  stnow [19];
 	strftime(stnow , 19, " %d/ %m/ %y  %H: %M: %S", tlocal);
 	//  Escribimos  en el log
-	registro = fopen("ficherolog.log" , "a");
+	registro = fopen(nombreArchivo, "a");
 	fprintf(registro , "[ %s]  %s:  %s\n", stnow , id, msg);
 	fclose(registro);
 }
