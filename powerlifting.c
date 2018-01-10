@@ -111,22 +111,22 @@ int main (int argc, char *argv[]) {
 	*/
 	/*
 	if (pthread_mutex_init(&semaforo_atletas, NULL)!=0)
-+	{
-+		perror("Error en la creación del semáforo de los atletas.\n");
-+		exit(-1);
-+	}
-+
-+	if (pthread_mutex_init(&semaforo_fuente, NULL)!=0)
-+	{
-+		perror("Error en la creación del semáforo de la fuente.\n");
-+		exit(-1);
-+	}
-+
-+	if (pthread_cond_init(&condicion, NULL)!=0)
-+	{
-+		perror("Error en la creación de la condición.\n");
-+		exit(-1);
-+	}
+	{
+		perror("Error en la creación del semáforo de los atletas.\n");
+		exit(-1);
+	}
+
+	if (pthread_mutex_init(&semaforo_fuente, NULL)!=0)
+	{
+		perror("Error en la creación del semáforo de la fuente.\n");
+		exit(-1);
+	}
+
+	if (pthread_cond_init(&condicion, NULL)!=0)
+	{
+		perror("Error en la creación de la condición.\n");
+		exit(-1);
+	}
  	}*/
 	//el contador de atletas lo tenemos inicializado arriba
 	inicializaCampeonato();
@@ -322,9 +322,9 @@ int main (int argc, char *argv[]) {
 	}
 	*/
 	/*if (pthread_mutex_init(&semaforo_atletas, NULL)!=0)
-+	{
-+		perror("Error en la creación del semáforo de los atletas.\n");
-+		exit(-1);
+	{
+		perror("Error en la creación del semáforo de los atletas.\n");
+		exit(-1);
  	}*/
 	//el contador de atletas lo tenemos inicializado arriba
 	inicializaCampeonato();
@@ -383,10 +383,10 @@ void nuevoCompetidor (int sig){
 		printf("Vas a ser inscrito\n");
 		/*
 		if (pthread_mutex_lock(&semaforo_atletas)!=0)
-+		{
-+			perror("Error en el bloqueo del semáforo de los atletas.\n");
-+			exit(-1);
-+		}
+		{
+			perror("Error en el bloqueo del semáforo de los atletas.\n");
+			exit(-1);
+		}
 		*/
 		contadorAtletas++;
 		posicion=haySitioEnCampeonato();
@@ -405,12 +405,12 @@ void nuevoCompetidor (int sig){
 		
 		/*ANTES o despues de accionesAtleta?
 		// Se desbloquea el semáforo, además se comprueba si falla.
-+
-+		if (pthread_mutex_unlock(&semaforo_atletas)!=0)
-+		{
-+			perror("Error en el desbloqueo del semáforo de los atletas.\n");
-+			exit(-1);
-+		}
+
+		if (pthread_mutex_unlock(&semaforo_atletas)!=0)
+		{
+			perror("Error en el desbloqueo del semáforo de los atletas.\n");
+			exit(-1);
+		}
 		*/
 	} else { 
 		printf("Ya están inscritos y participando 10 atletas, de momento no puedes participar\n");
@@ -424,25 +424,25 @@ void AccionesAtleta (){ //
 	//calculo del comportamiento del atleta
 
 	// El atleta llega a la tarima y espera 4 segundos para realiza su levantamiento.
-+
-+	printf("El atleta %i se prepara para realizar el levantamiento.\n", *(int*) arg);
-+	sleep(4);
-+
-+	// Comportamiento del atleta: comprobación del estado de salud.
-+
-+	int estado_salud=CalculaAleatorios(0,100);
-+	if (estado_salud<=15)
-+	{
-+		printf("El atleta %i no puede realizar el levantamiento por problemas de deshidratación.\n", *(int*) arg);		
-+	// Salir de la cola ???. 3.a. Si no llega a realizar el levantamiento, no llega a subir a la tarima y se escribe en el log, se daría fin al hilo Atleta y se liberaría espacio en la cola.
-+	}	
-+	else
-+	{
-+		sleep (3);
-+	}
+
+	printf("El atleta %i se prepara para realizar el levantamiento.\n", *(int*) arg);
+	sleep(4);
+
+	// Comportamiento del atleta: comprobación del estado de salud.
+
+	int estado_salud=CalculaAleatorios(0,100);
+	if (estado_salud<=15)
+	{
+		printf("El atleta %i no puede realizar el levantamiento por problemas de deshidratación.\n", *(int*) arg);		
+	// Salir de la cola ???. 3.a. Si no llega a realizar el levantamiento, no llega a subir a la tarima y se escribe en el log, se daría fin al hilo Atleta y se liberaría espacio en la cola.
+	}	
+	else
+	{
+		sleep (3);
+	}
 	// 4. Si ya ha salido a competir, debemos esperar a que termine.
-+	// 5. Guardamos en el log la hora a la que ha finalizado su levantamiento.
-+	// 6. Fin del hilo del atleta. NOTA: el hilo se sigue ejecutando aun asi este el tio ataascado en la fuente.
+	// 5. Guardamos en el log la hora a la que ha finalizado su levantamiento.
+	// 6. Fin del hilo del atleta. NOTA: el hilo se sigue ejecutando aun asi este el tio ataascado en la fuente.
 		
 }
 /*
@@ -453,9 +453,9 @@ void *actosTarima(void *id){
 void AccionesTarima (void *arg){
 	//busca primer atleta en espera de su cola, sino el primero de la otra tarima
 	// 2. Cambiamos el flag . (NOTA: se pone a 1) ¿QUÉ FLAG?
-+
-+
-+	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
+
+
+	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
 	
 	int comportamiento = calculaAletorios(0,10); 	//Numero aleatorio para calcular el comportamiento
 	if(comportamiento <8) {
