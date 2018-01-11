@@ -85,6 +85,13 @@ void *accionesTarima(void*);//le pasaremos la tarima
 void  writeLogMessage(char *id, char *msg);
 
 int main (int argc, char *argv[]) {
+	//parte opcional--> Asignacion estatica de recursos
+	if(argc==2) n=atoi(argv[1]);
+	if(argc==3){
+		 n=atoi(argv[1]);
+		 t=atoi(argv[2]);
+	}
+		
 	//SIGUSR1 para enviar a tarima1 
 	if(signal(SIGUSR1,nuevoCompetidor)==SIG_ERR) {
 				perror("Llamada a signal.");
