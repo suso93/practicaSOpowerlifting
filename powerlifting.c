@@ -233,7 +233,9 @@ void *accionesAtleta (void *arg){ //
 	int estado_salud=calculaAleatorios(0,100);
 	if (estado_salud<=15)
 	{
-		printf("El atleta %i no puede realizar el levantamiento por problemas de deshidratación.\n", *(int*) arg);		
+		printf("El atleta %i no puede realizar el levantamiento por problemas de deshidratación.\n", *(int*) arg);
+		msg = "No puedo realizar el levantamiento por problemas de deshidratación.";
+		writeLogMessage(arg, msg);
 	// Salir de la cola ???. 3.a. Si no llega a realizar el levantamiento, no llega a subir a la tarima y se escribe en el log, se daría fin al hilo Atleta y se liberaría espacio en la cola.
 	}	
 	else
@@ -241,7 +243,9 @@ void *accionesAtleta (void *arg){ //
 		sleep (3);
 	}
 	// 4. Si ya ha salido a competir, debemos esperar a que termine.
+	
 	// 5. Guardamos en el log la hora a la que ha finalizado su levantamiento.
+	
 	// 6. Fin del hilo del atleta. NOTA: el hilo se sigue ejecutando aun asi este el tio ataascado en la fuente.
 		
 }
@@ -289,15 +293,20 @@ void *AccionesTarima (void *arg){
 	}
 	
 	if(calculaAleatorios(0,10) == 1) {		//calcula si el atleta necesita beber o no
-	//	atletas[posicion].necesita_beber=1;	
+	//	atletas[posicion].necesita_beber=1;
+	//	char *msg = "Necesito ir a beber";   
+	//	writeLogMessage(atletas[posicion].id, msg);
 	}
 	
 	//Finaliza el atleta que esta participando
 	descansoTarima ++;
 	// Se comprueba si al juez le toca descansar (cada 4 atletas 10 segundos)
 	if(descansoTarima == 4) {
+		char *msg = "Inicio de descanso"; 
+		writeLogMessage(arg, msg);	//supongo que pasamos por agumento el id de la tarima
 		sleep(10);
-		
+		char *msg = "Fin de descanso"; 
+		writeLogMessage(arg, msg);	//supongo que pasamos por agumento el id de la tarima
 		descansoTarima = 0;
 	}
 	// 12. Volvemos al paso 1 y buscamos el siguiente (siempre priorizando entre los atletas asignados a dicha tarima).
@@ -315,6 +324,23 @@ void finalizaCompeticion (int sig){
 	}//
 	sleep(3);
 	printf("Te mostraré los resultados\n");//
+	
+	char *msg[60];
+	sprintf(msg, "Total atletas tarima 1: %d", );		//Despues de la coma poner el contador de esa tarima
+	writeLogMessage(arg, msg);
+	
+	sprintf(msg, "Total atletas tarima 2: %d", );		//Despues de la coma poner el contador de esa tarima
+	writeLogMessage(arg, msg);
+	
+	sprintf(msg, "Primer clasificado: Atleta %d con %d puntos",podio[0].id, podio[0].puntuacion );		
+	writeLogMessage(arg, msg);
+	
+	sprintf(msg, "Segundo clasificado: Atleta %d con %d puntos",podio[1].id, podio[1].puntuacion );		
+	writeLogMessage(arg, msg);
+	
+	sprintf(msg, "Tercer clasificado: Atleta %d con %d puntos",podio[2].id, podio[2].puntuacion );		
+	writeLogMessage(arg, msg);
+	
 	fclose(registro);
 	signal(SIGTERM, SIG_DFL);
 	raise(SIGTERM);//Que es y paa que sirve
