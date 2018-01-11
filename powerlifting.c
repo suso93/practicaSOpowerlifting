@@ -8,7 +8,7 @@
 #include<signal.h>
 #include<pthread.h>
 #include<sys/syscall.h>
-#include<ctype.h> //DUDA mia: este para que es? Gracias :)
+#include<ctype.h> //DUDA mia: este para que es? Gracias :) --> es un include q tiene variables para chequear el caracter introduzido, pero no lo usamos todavía.
 
 //Definicion de constantes
 
@@ -30,7 +30,7 @@ pthread_cond_t condicion; // Condición para la fuente.
 pthread_mutex_t semaforo_Escribir;
 pthread_mutex_t semaforo_Contador;
 pthread_mutex_t semaforo_Entrada_Cola;
-*/
+*/ // Yo diria q con estos 3 semaforos esta bien, el tercero es el q yo os decía q podíamos poner 2 en lugar de 1, depende de como lo miremos
 
 struct atletasCompeticion {
 	int id;
@@ -49,8 +49,8 @@ struct tarimasCompeticion {
 	int estado;//0 para libre, 1 para ocupada, 2 para cerrada
 	int atletas;//contador de atletas que han pasado por esta tarima
 };
-struct tarimasCompeticion tarima[NUMEROTARIMAS];*/
-/*OTRA opcion para las tarimas: 
+struct tarimasCompeticion tarima[NUMEROTARIMAS];*/ 
+/*OTRA opcion para las tarimas:  //esta es la buena , pero esta tarde se mira bien
 struct tarimasCompeticion{
 	int id;
 	int descansa; //estado: 3 estados segun las especificaciones
@@ -63,7 +63,7 @@ FILE *registro;
 char *nombreArchivo = "registroTiempos.log";
 
 /*int podio[3]; 
-int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?*/
+int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?*/ //MIERDA SE NOS OLVIDO PREGUNTARSELO
 struct podioCompeticion {
 	int id;//del atleta
 	int puntuacion;
