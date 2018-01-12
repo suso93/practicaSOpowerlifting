@@ -79,17 +79,17 @@ int finalizar; // Bandera para finalizar cuando sea igual a 1.
 /* Declaración de las funciones. */
 
 
-int calculaAleatorios();
+int calculaAleatorios(int min, int max);
 
-void inicializaCampeonato(int , int );
+void inicializaCampeonato(int maxAtletas, int numTarimas);
 int haySitioEnCampeonato(); // Para saber si hay sitio (y si lo hay nos dice el primer hueco) para que entre un atleta a competir.
-void nuevoCompetidor(int ); // REVISAR para múltiples tarimas.
-void finalizaCompeticion(int );
+void nuevoCompetidor(int sig); // REVISAR para múltiples tarimas.
+void finalizaCompeticion(int sig);
 
-void *accionesAtleta(void* ); // El argumento es el atleta.
-void *accionesTarima(void* ); // El argumento es la tarima.
+void *accionesAtleta(void*); // El argumento que le pasaremos es el atleta.
+void *accionesTarima(void*); // El argumento que le pasaremos es la tarima.
 
-void  writeLogMessage(char* , char *);
+void  writeLogMessage(char *id, char *msg);
 
 
 
@@ -98,8 +98,8 @@ void  writeLogMessage(char* , char *);
 
 int main (int argc, char *argv[]) {
 	// Parte opcional --> Asignación estática de recursos.
-	maxAtletas = MAXIMOATLETAS; // Se inicia el máximo de atletas por defecto.
-	numTarimas = NUMEROTARIMAS; // Se inicia el número de tarimas por defecto.
+	maxAtletas = MAXIMOATLETAS; // Se inicia con el máximo de atletas por defecto.
+	numTarimas = NUMEROTARIMAS; // Se inicia con el número de tarimas por defecto.
 
 	// Si se introducen argumentos por la terminal el primero será para el máximo de atletas y el segundo para el número de tarimas.
 	if(argc==2) maxAtletas=atoi(argv[1]);
@@ -110,7 +110,7 @@ int main (int argc, char *argv[]) {
 	}
 		
 
-	// Se inicializan las señales para las tarimas y para finalizar la competición, además de comprobar si hay errores.
+	// Se modifican los comportamientos las señales para inscribir a los atletas y para finalizar la competición, además de comprobar si hay errorer.
 	if(signal(SIGUSR1,nuevoCompetidor)==SIG_ERR) 
 	{
 		perror("Error en la llamada a la señal SIGUSR1.\n");
@@ -127,12 +127,10 @@ int main (int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	
 	// Se reserva espacio en memoria para los punteros de las tarimas y los atletas.
 	punteroTarimas = (struct tarimasCompeticion*)malloc(sizeof(struct tarimasCompeticion)*numTarimas);
 	atletas = (struct atletasCompeticion*)malloc(sizeof(struct atletasCompeticion)*maxAtletas);
-	
-	
+		
 	// Se inicializan los semáforos y la condición, además de comprobar si hay errores.
 	if (pthread_mutex_init(&semaforo_atletas, NULL)!=0)
 	{
@@ -158,12 +156,10 @@ int main (int argc, char *argv[]) {
 		exit(-1);
  	}
  	
- 	
-	// Se inicializan el contador de atletas, la fuente, finalizar, los datos de los atletas y las tarimas y se crean los hilos para la tarimas.
+	// Con la funcion se inicializan el contador de atletas, la fuente, finalizar, los datos de los atletas y las tarimas y se crean los hilos para la tarimas.
 	inicializaCampeonato(maxAtletas, numTarimas);
 
-
-	// Se crea el fichero log y se comprueba si hay errores.
+	// Se crea el fichero log para escritura y se comprueba si hay errores.
 	registro = fopen (nombreArchivo,"w");
 	if(registro==NULL)
 	{
@@ -178,7 +174,8 @@ int main (int argc, char *argv[]) {
 
 		while(finalizar==0) // Bucle para recibir señales, duerme cada segundo para no sobrecargar al procesador.
 		{
-			sleep(1);
+			sleep(2);
+			printf("Comprobacion1: a ver si es poco sleep y peta...\n");
 		}
 	}
 	
@@ -187,7 +184,7 @@ int main (int argc, char *argv[]) {
 
 
 
-/* Definición de las funciones. */
+/* Implementación de las funciones. */
 
 
 void inicializaCampeonato(int maxAtletas, int numTarimas) 
@@ -237,7 +234,7 @@ int haySitioEnCampeonato()
 void nuevoCompetidor (int sig)
 { 
 	int posicion;
-
+	
 	if(signal(SIGUSR1,nuevoCompetidor)==SIG_ERR) 
 	{
 		perror("Error en la llamada a la señal SIGUSR1.\n");
@@ -268,7 +265,7 @@ void nuevoCompetidor (int sig)
 			atletas[posicion].id=contadorAtletas;
 			atletas[posicion].puntuacion=0;
 			
-			// Se establecen las señales para asignar las tarimas, además se comprueba si fallan.
+			// Según que señal se recibe se asigna la tarima correspondiente, además se comprueba si fallan.
 			if (sig== SIGUSR1)
 			{
 				atletas[posicion].tarima_asignada=1;
@@ -278,12 +275,12 @@ void nuevoCompetidor (int sig)
 					atletas[posicion].tarima_asignada=2;
 				}
 
-				atletas[posicion].ha_competido=0;
-				atletas[posicion].necesita_beber=0;
-				printf("El atleta %d se prepara para ir a la tarima %d.\n", atletas[posicion].id, atletas[posicion].tarima_asignada);
+			atletas[posicion].ha_competido=0;
+			atletas[posicion].necesita_beber=0;
+			printf("El atleta %d se prepara para ir a la tarima %d.\n", atletas[posicion].id, atletas[posicion].tarima_asignada);
 		
-				// Se crea el hilo para el atleta.
-				pthread_create(&atletas[posicion].atleta, NULL, accionesAtleta, (void *)&atletas[posicion].id);
+			// Se crea el hilo para el atleta.
+			pthread_create(&atletas[posicion].atleta, NULL, accionesAtleta, (void *)&atletas[posicion].id);
 		} 
 		else 
 		{ 
@@ -352,7 +349,7 @@ void *accionesAtleta (void *arg)
 	}while (atletas[pos].ha_competido==0); // Fin del atleta en la cola.
 
 
-	// El atleta llega a la tarima y espera 4 segundos para realiza su levantamiento.
+	// El atleta llega a la tarima y espera 4 segundos para realizar su levantamiento.
 	printf("El atleta %d se prepara para realizar el levantamiento.\n", dorsal);
 	sleep(4);
 
@@ -365,7 +362,7 @@ void *accionesAtleta (void *arg)
 		printf("El atleta %d no puede realizar el levantamiento por problemas de deshidratación.\n", dorsal);
 
 		sprintf(elemento, "Atleta %d", dorsal); 
-		sprintf(msg, "Estoy deshidratado de tanto estrés.\n");
+		sprintf(msg, "Estoy deshidratado de tanto estrés y no puedo realizar el levantamiento.\n");
 		writeLogMessage(elemento, msg);
 	// Salir de la cola ???. 3.a. Si no llega a realizar el levantamiento, no llega a subir a la tarima y se escribe en el log, se daría fin al hilo Atleta y se liberaría espacio en la cola.
 	}	
@@ -377,7 +374,7 @@ void *accionesAtleta (void *arg)
 	
 	// 5. Guardamos en el log la hora a la que ha finalizado su levantamiento.
 	
-	// 6. Fin del hilo del atleta. NOTA: el hilo se sigue ejecutando aun asi este el tio ataascado en la fuente.
+	// 6. Fin del hilo del atleta. NOTA: el hilo se sigue ejecutando aun asi este el tio atascado en la fuente.
 			
 }
 
@@ -391,8 +388,17 @@ void *accionesTarima (void *arg)
 	int puntuacion;
 	char *id;
 	char *msg;
+	int i;
 	
-
+	// Se calcula la posición (hemos llamado lugar) del atleta.
+	for(i=0; i<maxAtletas; i++)
+	{
+		if(atletas[i].id==numero)
+		{
+			lugar = i;
+			break;
+		}
+	}
 	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
 	do
 	{
