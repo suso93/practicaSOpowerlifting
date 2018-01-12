@@ -5,10 +5,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <time.h>
-#include<signal.h>
-#include<pthread.h>
-#include<sys/syscall.h>
-#include<ctype.h> //DUDA mia: este para que es? Gracias :) --> es un include q tiene variables para chequear el caracter introduzido, pero no lo usamos todavía.
+#include <signal.h>
+#include <pthread.h>
+#include <sys/syscall.h>
+#include <ctype.h> // DUDA mia: este para que es? Gracias :) --> es un include q tiene variables para chequear el caracter introduzido, pero no lo usamos todavía.
 
 //Definicion de constantes
 
@@ -23,7 +23,7 @@ int atletas_tarima2;*/
 
 //inicializar los semaforos:
 pthread_mutex_t semaforo_fuente,semaforo_atletas;
-pthread_cond_t condicion; // Condición para la fuente.
+pthread_cond_t condicionFuente; 
 
 /*REVISAR que opcion de mutex es mejor y vamos a usar
 //lo aclaró hoy y se usará como arriba en principio
@@ -63,12 +63,14 @@ FILE *registro;
 char *nombreArchivo = "registroTiempos.log";
 
 /*int podio[3]; 
-int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?*/ //MIERDA SE NOS OLVIDO PREGUNTARSELO
+int mejoresAtletas[3];//no tengo claro porque hay un podio y un registro de los 3 mejores ¿no es lo mismo?*/ //MIERDA SE NOS OLVIDO PREGUNTARSELO //Ya lo explico y si es para uno el id y el otro la pu ntuacion x eso lo del struct podio
 struct podioCompeticion {
 	int id;//del atleta
 	int puntuacion;
 };
 struct podioCompeticion podio[3]; //los tres mejores
+int colaTarima1[MAXIMOATLETAS];
+int colaTarima2[MAXIMOATLETAS];
 int estadoFuente;//0 libre, 1 para ocupada
 int finalizar;
 
@@ -79,13 +81,15 @@ int haySitioEnCampeonato();//nos dirá si hay sitio (y si lo hay nos dice el pri
 void nuevoCompetidor(int sig);//REVISAR al añadir para ya dos tarimas
 //void competidorATarima1();
 void finalizaCompeticion(int sig);
-void *accionesAtleta(void*, int );//le pasaremos el atleta (VER ¿id?/¿posicion?) y la tarima
-void *accionesTarima(void*);//le pasaremos la tarima
+void *accionesAtleta(void*);//le pasaremos el atleta (VER ¿id?/¿posicion?) y la tarima
+void *accionesTarima(void*);//le pasaremos la tarima //Ver si nos interesa al ir implementando que devuelva el numero de atendidos ( o no )
 
 void  writeLogMessage(char *id, char *msg);
 
 int main (int argc, char *argv[]) {
 	//parte opcional--> Asignacion estatica de recursos
+	//TENER EN CUENTA: para implementar esta parte habria que cambiar las constantes MAXIMOATLETAS y NUMEROTARIMAS
+	//y ponerlas como variables dentro del main inicializadas con los valores 10 y 2 respectivamente
 	if(argc==2) n=atoi(argv[1]);
 	if(argc==3){
 		 n=atoi(argv[1]);
@@ -97,10 +101,10 @@ int main (int argc, char *argv[]) {
 				perror("Llamada a signal.");
 				exit(-1);
 	}
-	/*if(signal(SIGUSR2,competidorATarima2)==SIG_ERR) {
+	if(signal(SIGUSR2,nuevoCompetidor)==SIG_ERR) {
 				perror("Llamada a signal.");
 				exit(-1);
-	}*/
+	}
 	if(signal(SIGINT,finalizaCompeticion)==SIG_ERR) {
 				perror("Llamada a signal.");
 				exit(-1);
@@ -127,9 +131,11 @@ int main (int argc, char *argv[]) {
 	//tarimas:crear los 2 hilos de tarimas (primero solo 1)
 	//pthread_create(...);
 	registro = fopen (nombreArchivo,"w"); //errores al abrir?
+	//en la linea de fopen estamos inicializandolo para escribirlo desde 0
+	//fclose(registro); //por lo que igual si q hay q ponerlo aqui
 	srand (time(NULL)); //Para generar numeros aleatorios, VER si hacemos asi o con otra semilla
 	
-	//visualizo la estructura inicial PARA IR PROBANDO -> BORRAR: 
+/*	//visualizo la estructura inicial PARA IR PROBANDO -> BORRAR: 
 	for (int i=0;i<MAXIMOATLETAS;i++) {
 		printf("Atleta %d: ha competido %d, su tarima actual es %d y necesita beber %d\n",atletas[i].id,atletas[i].ha_competido,atletas[i].tarima_asignada,atletas[i].necesita_beber);
 	}
@@ -139,7 +145,7 @@ int main (int argc, char *argv[]) {
 	} else {
 		printf("Hueco para nuevo atleta: %d\n",haySitioEnCampeonato());
 	}//HASTA AKI BORRAR
-
+*/
 
 	while(1) {
 	
@@ -151,11 +157,18 @@ int main (int argc, char *argv[]) {
 
 void inicializaCampeonato() {
 	for (int i=0;i<MAXIMOATLETAS;i++) {
+		//mutex para cerrar esa posicion de atleta¿?¿?
 		atletas[i].id=0;
 		atletas[i].ha_competido=0;
 		atletas[i].tarima_asignada=0;
 		atletas[i].puntuacion=0;
 		atletas[i].necesita_beber=0;
+		//desbloquear acceso a esa posicion
+	}
+	//inicializar las colas de las tarimas
+	for(int j=0;j<NUMEROTARIMAS;j++) {
+		colaTarima1[j]=0;
+		colaTarima2[j]=0;
 	}
 } //es posible que no lo necesitemos ya que se inicializan al crearse un nuevo competidor.. 
 
@@ -175,7 +188,13 @@ void nuevoCompetidor (int sig){
 				perror("Llamada a signal.");
 				exit(-1);
 	}
+	if(signal(SIGUSR2,nuevoCompetidor)==SIG_ERR) {
+				perror("Llamada a signal.");
+				exit(-1);
+	}
+
 	printf("Un atleta ha solicitado inscribirse...\n");
+
 	if(haySitioEnCampeonato()!=-1) {
 		printf("Vas a ser inscrito\n");
 		
@@ -254,7 +273,7 @@ void *actosTarima(void *id){
 
 }
 */
-void *AccionesTarima (void *arg){
+void *accionesTarima (void *arg){
 	int descansoTarima=0; //contador de atletas que han participado en la tarima para empezar a descansar
 	//busca primer atleta en espera de su cola, sino el primero de la otra tarima
 	// 2. Cambiamos el flag . (NOTA: se pone a 1) ¿QUÉ FLAG? 
@@ -266,7 +285,7 @@ void *AccionesTarima (void *arg){
 	if(comportamiento <8) {
 		int tiempo = calculaAleatorios(2,6);
 		sleep(tiempo);
-		char *msg = "He hecho un levantamiento valido en: ";    //La hora la indica la funcion del log
+		char *msg = "He hecho un levantamiento valido en:  ";    //La hora la indica la funcion del log
 		writeLogMessage(atletas[posicion].id, msg);  //Duda sobre si poner id del atleta o la tarima 
 		
 		int puntuacion = calculaAleatorios(60,300);
