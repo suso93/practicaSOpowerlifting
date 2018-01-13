@@ -512,7 +512,7 @@ void eliminaAtleta(int pos){
 
 void *accionesTarima (void *arg)
 {
-	int numero = *(int*)arg; // Se convierte el argumento a tipo entero.
+	int numero;// = *(int*)arg; // Se convierte el argumento a tipo entero.
 	int lugar;
 	int comportamiento;
 	int tiempo;
@@ -523,7 +523,11 @@ void *accionesTarima (void *arg)
 
 	
 	// Se calcula la posición (hemos llamado lugar) del atleta.
+  
 /*	for(i=0; i<maxAtletas; i++)
+
+	/*for(i=0; i<maxAtletas; i++)
+
 	{
 		if(atletas[i].id==numero) // NO DEBERÍA SER TARIMA_ASIGNADA???
 		{
@@ -532,7 +536,11 @@ void *accionesTarima (void *arg)
 		}
 	}
 	
+
 	id = (char*)malloc(sizeof(char)*30);
+
+	elemento = (char*)malloc(sizeof(char)*30);
+
 	msg = (char*)malloc(sizeof(char)*256);
 
 	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
