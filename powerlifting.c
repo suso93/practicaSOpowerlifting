@@ -523,7 +523,11 @@ void *accionesTarima (void *arg)
 
 	
 	// Se calcula la posición (hemos llamado lugar) del atleta.
+  
+/*	for(i=0; i<maxAtletas; i++)
+
 	/*for(i=0; i<maxAtletas; i++)
+
 	{
 		if(atletas[i].id==numero) // NO DEBERÍA SER TARIMA_ASIGNADA???
 		{
@@ -532,7 +536,11 @@ void *accionesTarima (void *arg)
 		}
 	}
 	
+
+	id = (char*)malloc(sizeof(char)*30);
+
 	elemento = (char*)malloc(sizeof(char)*30);
+
 	msg = (char*)malloc(sizeof(char)*256);
 
 	// Se calcula lo que le sucede al atleta y se guarda en el fichero log la hora a la que realizó el levantamiento.
@@ -725,9 +733,9 @@ void *accionesTarima (void *arg)
 		}
 		// 12. Volvemos al paso 1 y buscamos el siguiente (siempre priorizando entre los atletas asignados a dicha tarima).
 		//para la parte opcional, con el malloc reservo espacio para muchos mas, en plan 300, y no con eso quiero decir q vaya  a permitir entrarl a todos, sino que hay espacio en memoria
-	}while (finalizar==0);*/
-	free(elemento);
-	free(msg);	
+	}while (finalizar==0);
+	free(id);
+	free(msg);	*/
 }
 
 void finalizaCompeticion (int sig)
@@ -879,4 +887,6 @@ int calculaAleatorios(int min, int max)
 {
 	return rand() % (max-min+1) + min;
 }
+
+
 
